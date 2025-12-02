@@ -9,7 +9,8 @@ import { GameService } from './services/game.service';
   standalone: true,
   imports: [CommonModule, Cube3DComponent, SidebarComponent],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  // Use styleUrls for broad compatibility across Angular tooling and versions.
+  styleUrls: ['./app.component.css'],
 })
 export class AppComponent {
   title = '3D Tic Tac Toe';

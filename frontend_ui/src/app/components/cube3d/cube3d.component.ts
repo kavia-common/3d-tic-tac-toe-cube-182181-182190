@@ -72,10 +72,14 @@ import { CubeCellComponent } from './cube-cell.component';
       place-items: center;
       perspective: 900px;
       width: 100%;
-      padding: 8px;
+      padding: 10px;
       /* Prevent scroll conflicts during drag on touch devices */
       touch-action: none;
       user-select: none;
+
+      /* Light gradient background for contrast with white cells */
+      background: radial-gradient(600px 400px at 50% -10%, rgba(37, 99, 235, 0.06), rgba(249, 250, 251, 0));
+      border-radius: 16px;
     }
 
     .cube-wrapper {
@@ -84,6 +88,10 @@ import { CubeCellComponent } from './cube-cell.component';
       /* Maintain square area regardless of container flow */
       aspect-ratio: 1 / 1;
       height: auto;
+      min-width: 260px;
+      min-height: 260px;
+      overflow: visible;
+
       /* Help browser isolate layout/paint of this subtree */
       contain: layout paint size;
       will-change: transform, width, height;
@@ -94,8 +102,11 @@ import { CubeCellComponent } from './cube-cell.component';
       position: absolute;
       inset: 0;
       transform-style: preserve-3d;
+      transform-origin: 50% 50%;
       transition: transform 260ms cubic-bezier(.2,.8,.2,1);
       will-change: transform;
+      /* Slight drop shadow for depth perception */
+      filter: drop-shadow(0 20px 30px rgba(0,0,0,0.08));
     }
     .scene.collapsed {
       transition: transform 160ms ease-out;
@@ -110,6 +121,7 @@ import { CubeCellComponent } from './cube-cell.component';
       top: 50%;
       transform: translate3d(-50%, -50%, 0);
       will-change: transform;
+      pointer-events: none; /* let individual cells handle interactions */
     }
 
     .cell-holder {
@@ -119,11 +131,16 @@ import { CubeCellComponent } from './cube-cell.component';
       transform-style: preserve-3d;
       transition: transform 200ms ease;
       will-change: transform;
+      pointer-events: auto;
     }
 
     @media (max-width: 480px) {
       .cube-area {
-        padding: 6px;
+        padding: 8px;
+      }
+      .cube-wrapper {
+        min-width: 220px;
+        min-height: 220px;
       }
     }
   `,
