@@ -29,6 +29,12 @@ import { CubeCellComponent } from './cube-cell.component';
  * - requestAnimationFrame batching for pointermove updates.
  * - will-change hints and GPU-friendly transforms.
  * - touch-action: none to ensure smooth pointer interactions on mobile.
+ *
+ * 3D rendering notes:
+ * - Perspective is applied on .cube-area
+ * - preserve-3d is ensured on all transform containers (.scene, .grid, .cube-wrapper)
+ * - Removed paint containment that could flatten 3D context or clip depth
+ * - Depth ordering is handled via 3D transform, not manual z-index
  */
 @Component({
   selector: 'app-cube3d',
@@ -48,7 +54,6 @@ import { CubeCellComponent } from './cube-cell.component';
               <div
                 class="cell-holder"
                 [style.transform]="cell.transform"
-                [style.zIndex]="cell.zIndex"
               >
                 <app-cube-cell
                   [value]="cell.value"
@@ -70,7 +75,8 @@ import { CubeCellComponent } from './cube-cell.component';
     .cube-area {
       display: grid;
       place-items: center;
-      perspective: 900px;
+      perspective: 1100px;
+      perspective-origin: 50% 50%;
       width: 100%;
       padding: 10px;
       /* Prevent scroll conflicts during drag on touch devices */
@@ -80,6 +86,7 @@ import { CubeCellComponent } from './cube-cell.component';
       /* Light gradient background for contrast with white cells */
       background: radial-gradient(600px 400px at 50% -10%, rgba(37, 99, 235, 0.06), rgba(249, 250, 251, 0));
       border-radius: 16px;
+      overflow: visible;
     }
 
     .cube-wrapper {
@@ -92,8 +99,12 @@ import { CubeCellComponent } from './cube-cell.component';
       min-height: 260px;
       overflow: visible;
 
-      /* Help browser isolate layout/paint of this subtree */
-      contain: layout paint size;
+      /* IMPORTANT: Ensure 3D is preserved through wrapper */
+      transform-style: preserve-3d;
+
+      /* Avoid paint/layout containment that can flatten perspective or clip */
+      /* contain: layout paint size;  -- REMOVED to avoid 3D flattening/clipping */
+
       will-change: transform, width, height;
       transition: width 220ms ease, height 220ms ease;
     }
@@ -132,6 +143,7 @@ import { CubeCellComponent } from './cube-cell.component';
       transition: transform 200ms ease;
       will-change: transform;
       pointer-events: auto;
+      backface-visibility: hidden;
     }
 
     @media (max-width: 480px) {
@@ -162,21 +174,40 @@ export class Cube3DComponent implements OnInit, OnDestroy {
     return this._collapsed;
   }
 
+  // PUBLIC_INTERFACE
+  /** Enable/disable auto-rotation to verify 3D depth visually. */
+  @Input()
+  set autoRotate(val: boolean) {
+    const next = !!val;
+    if (next === this.autoRotate$.value) return;
+    this.autoRotate$.next(next);
+    if (next) {
+      this.startAutoRotate();
+    } else {
+      this.stopAutoRotate();
+    }
+  }
+  get autoRotate(): boolean {
+    return this.autoRotate$.value;
+  }
+
   @ViewChild('wrapper', { static: true }) wrapper!: ElementRef<HTMLElement>;
 
   private readonly rotationX$ = new BehaviorSubject<number>(-18);
   private readonly rotationY$ = new BehaviorSubject<number>(-25);
   private readonly collapsed$ = new BehaviorSubject<boolean>(this._collapsed);
+  private readonly autoRotate$ = new BehaviorSubject<boolean>(false);
 
   private pointerActive = false;
   private lastX = 0;
   private lastY = 0;
   private rafScheduled = false;
+  private autoRotateRaf: number | null = null;
 
   sceneTransform = '';
 
   cells$!: Observable<
-    Array<{ value: CellValue; transform: string; isWinning: boolean; zIndex: number }>
+    Array<{ value: CellValue; transform: string; isWinning: boolean }>
   >;
 
   constructor(private game: GameService, private renderer: Renderer2, private cdr: ChangeDetectorRef) {}
@@ -186,15 +217,14 @@ export class Cube3DComponent implements OnInit, OnDestroy {
     // Recompute the absolute positions when state or collapsed toggles (gap/depth changes).
     this.cells$ = combineLatest([this.game.state$, this.collapsed$]).pipe(
       map(([state, collapsed]) => {
-        // Gap controls spacing; when collapsed we reduce spacing and depth.
-        // Note: actual rendered size of cells is controlled via CSS var --cell-size (clamped in template).
-        // Here we only compute translation offsets.
-        const gap = collapsed ? 28 /* a mid value to pair with clamp CSS */ : 70;
+        // Gap controls spacing; when collapsed we reduce spacing and depth, but still keep depth visible.
+        const gap = collapsed ? 32 /* compact spacing */ : 70; // matches theme token defaults
+        const depth = collapsed ? Math.max(24, Math.round(gap * 0.6)) : gap; // keep depth visible even when collapsed
+
         const items: Array<{
           value: CellValue;
           transform: string;
           isWinning: boolean;
-          zIndex: number;
         }> = [];
         const winning = new Set(state.winningLine || []);
         for (let z = 0; z < 3; z++) {
@@ -203,14 +233,11 @@ export class Cube3DComponent implements OnInit, OnDestroy {
               const index = x + y * 3 + z * 9;
               const tx = (x - 1) * gap;
               const ty = (y - 1) * gap;
-              // compressed depth when collapsed
-              const tz = (z - 1) * (collapsed ? 8 : gap);
+              const tz = (z - 1) * depth;
               const transform = `translate3d(${tx}px, ${ty}px, ${tz}px)`;
               const value = state.board[index];
               const isWinning = winning.has(index);
-              // Paint order: larger tz should be behind
-              const zIndex = Math.round(tz);
-              items.push({ value, transform, isWinning, zIndex });
+              items.push({ value, transform, isWinning });
             }
           }
         }
@@ -223,6 +250,8 @@ export class Cube3DComponent implements OnInit, OnDestroy {
     this.rotationX$.complete();
     this.rotationY$.complete();
     this.collapsed$.complete();
+    this.autoRotate$.complete();
+    this.stopAutoRotate();
   }
 
   handleSelect(index: number) {
@@ -237,6 +266,8 @@ export class Cube3DComponent implements OnInit, OnDestroy {
     this.lastX = ev.clientX;
     this.lastY = ev.clientY;
     this.collapsed = true;
+    // Pause auto-rotation during manual interaction
+    if (this.autoRotate) this.stopAutoRotate();
   }
 
   @HostListener('pointermove', ['$event'])
@@ -276,6 +307,8 @@ export class Cube3DComponent implements OnInit, OnDestroy {
     globalThis.setTimeout(() => {
       this.collapsed = false;
       this.updateSceneTransform();
+      // Resume auto-rotation if it was enabled
+      if (this.autoRotate$.value) this.startAutoRotate();
     }, 80);
   }
 
@@ -290,6 +323,7 @@ export class Cube3DComponent implements OnInit, OnDestroy {
     this.pointerActive = false;
     this.collapsed = false;
     this.updateSceneTransform();
+    if (this.autoRotate$.value) this.startAutoRotate();
   }
 
   private updateSceneTransform() {
@@ -299,5 +333,24 @@ export class Cube3DComponent implements OnInit, OnDestroy {
     // Use translateZ to hint GPU acceleration path
     this.sceneTransform = `translateZ(0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${scale})`;
     this.cdr.markForCheck();
+  }
+
+  private startAutoRotate() {
+    if (this.autoRotateRaf != null) return;
+    const tick = () => {
+      // Slow, steady rotation to demonstrate depth
+      const nextY = this.rotationY$.value + 0.25;
+      this.rotationY$.next(nextY);
+      this.updateSceneTransform();
+      this.autoRotateRaf = globalThis.requestAnimationFrame(tick);
+    };
+    this.autoRotateRaf = globalThis.requestAnimationFrame(tick);
+  }
+
+  private stopAutoRotate() {
+    if (this.autoRotateRaf != null) {
+      globalThis.cancelAnimationFrame(this.autoRotateRaf);
+      this.autoRotateRaf = null;
+    }
   }
 }

@@ -6,11 +6,16 @@
 
   <main class="layout" role="main">
     <section class="main-area">
-      <app-cube3d></app-cube3d>
+      <app-cube3d [autoRotate]="autoRotate"></app-cube3d>
 
       <div class="controls">
         <button class="btn primary" (click)="game.reset()">Restart</button>
         <button class="btn subtle" (click)="game.undo()">Undo</button>
+
+        <button class="btn toggle" (click)="toggleAutoRotate()">
+          {{ autoRotate ? 'Stop Auto-Rotate' : 'Start Auto-Rotate' }}
+        </button>
+
         <div class="mode">
           <span>Mode:</span>
           <button class="btn toggle" (click)="game.setMode('PVP')">Two Players</button>
@@ -25,6 +30,6 @@
   </main>
 
   <footer class="footer">
-    <span>Tip: Drag to rotate; while dragging, the cube collapses for easier selection.</span>
+    <span>Tip: Drag to rotate; while dragging, the cube collapses but remains 3D for easier selection. Use Auto-Rotate to verify depth.</span>
   </footer>
 </div>

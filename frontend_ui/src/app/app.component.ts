@@ -14,6 +14,13 @@ import { GameService } from './services/game.service';
 })
 export class AppComponent {
   title = '3D Tic Tac Toe';
+  autoRotate = false;
 
   constructor(public game: GameService) {}
+
+  // PUBLIC_INTERFACE
+  /** Toggle auto-rotation of the 3D cube to verify depth and perspective. */
+  toggleAutoRotate(): void {
+    this.autoRotate = !this.autoRotate;
+  }
 }
