@@ -10,7 +10,7 @@
   text-align: center;
 }
 .header h1 {
-  font-size: 1.8rem;
+  font-size: clamp(1.4rem, 2.4vw, 1.8rem);
   font-weight: 800;
   color: var(--text, #111827);
   letter-spacing: -0.02em;
@@ -18,24 +18,36 @@
 .subtitle {
   margin-top: 4px;
   color: #6b7280;
+  font-size: clamp(0.9rem, 1.5vw, 1rem);
 }
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 24px;
+  grid-template-columns: minmax(280px, 1fr) 320px;
+  gap: clamp(14px, 2.2vw, 24px);
   padding: 18px 20px 28px;
   align-items: start;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
+
 .main-area {
   background: var(--surface, #ffffff);
   border-radius: 20px;
-  padding: 18px;
+  padding: clamp(12px, 1.8vw, 18px);
   box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center cube + controls horizontally */
+  justify-content: flex-start;
+  overflow: visible;
 }
+
 .side-area {
   align-self: stretch;
 }
+
 .controls {
   display: flex;
   gap: 10px;
@@ -43,13 +55,16 @@
   flex-wrap: wrap;
   justify-content: center;
   margin-top: 12px;
+  width: 100%;
 }
+
 .mode {
   display: inline-flex;
   gap: 8px;
   align-items: center;
   margin-left: 8px;
 }
+
 .btn {
   border: none;
   border-radius: 10px;
@@ -58,6 +73,7 @@
   background: #e5e7eb;
   color: #111827;
   transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
+  font-size: clamp(0.9rem, 1.4vw, 1rem);
 }
 .btn:hover {
   transform: translateY(-1px);
@@ -69,6 +85,7 @@
 }
 .btn.subtle {
   background: #f3f4f6;
+  color: #111827;
 }
 .btn.toggle {
   background: #eef2ff;
@@ -79,14 +96,30 @@
   padding: 14px 20px 22px;
   text-align: center;
   color: #6b7280;
+  font-size: clamp(0.85rem, 1.2vw, 0.95rem);
 }
 
 /* Responsive */
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr 300px;
+  }
+}
+
 @media (max-width: 940px) {
   .layout {
     grid-template-columns: 1fr;
   }
   .side-area {
     order: 2;
+  }
+}
+
+@media (max-width: 420px) {
+  .controls {
+    gap: 8px;
+  }
+  .btn {
+    padding: 7px 10px;
   }
 }

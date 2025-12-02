@@ -8,8 +8,16 @@
   --surface: #ffffff;
   --text: #111827;
 
+  /* Sizing tokens */
   --cell-size: 64px;
   --gap: 70px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -23,4 +31,11 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-button { font: inherit; }
+/* Normalize interaction behaviour on touch and mouse */
+button {
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+a { color: inherit; }
+img { max-width: 100%; height: auto; display: block; }
