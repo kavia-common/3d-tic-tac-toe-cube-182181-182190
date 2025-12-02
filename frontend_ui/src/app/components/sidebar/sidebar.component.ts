@@ -1,8 +1,8 @@
 import { AsyncPipe, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { map } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { GameService } from '../../services/game.service';
-import { GameMode } from '../../models/game.models';
+import { GameMode, GameState } from '../../models/game.models';
 
 /**
  * PUBLIC_INTERFACE
@@ -24,10 +24,10 @@ import { GameMode } from '../../models/game.models';
         <div class="row mode">
           <span>Mode:</span>
           <button class="btn toggle"
-                  [class.active]="(mode$ | async) === 'PVP'"
+                  [class.active]="isPvp$ | async"
                   (click)="setMode('PVP')">Two Players</button>
           <button class="btn toggle"
-                  [class.active]="(mode$ | async) === 'AI'"
+                  [class.active]="isAi$ | async"
                   (click)="setMode('AI')">Vs AI</button>
         </div>
 
@@ -156,13 +156,26 @@ import { GameMode } from '../../models/game.models';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SidebarComponent {
-  constructor(private game: GameService) {}
+  readonly state$: Observable<GameState>;
+  readonly mode$: Observable<GameMode>;
+  readonly isPvp$: Observable<boolean>;
+  readonly isAi$: Observable<boolean>;
 
-  // Expose as getters to avoid pre-constructor field initialization
-  get state$() { return this.game.state$; }
-  get mode$() { return this.game.state$.pipe(map(s => s.mode as GameMode)); }
+  constructor(private game: GameService) {
+    // Initialize observable properties after DI parameter is assigned to avoid TS2729.
+    this.state$ = this.game.state$.asObservable();
+    this.mode$ = this.state$.pipe(map((s) => s.mode));
+    this.isPvp$ = this.mode$.pipe(map((m) => m === 'PVP'));
+    this.isAi$ = this.mode$.pipe(map((m) => m === 'AI'));
+  }
 
+  // PUBLIC_INTERFACE
+  /** Trigger a full game reset. */
   reset() { this.game.reset(); }
+  // PUBLIC_INTERFACE
+  /** Undo the last move, if any. */
   undo() { this.game.undo(); }
+  // PUBLIC_INTERFACE
+  /** Switch game mode between PVP and AI. */
   setMode(mode: GameMode) { this.game.setMode(mode); }
 }
