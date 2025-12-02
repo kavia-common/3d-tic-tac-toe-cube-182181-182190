@@ -1,3 +1,30 @@
-<div class="container">
-  <h1>{{ title }}</h1>
+<div class="app-root">
+  <header class="header">
+    <h1>{{ title }}</h1>
+    <p class="subtitle">Ocean Professional • 3x3x3</p>
+  </header>
+
+  <main class="layout" role="main">
+    <section class="main-area">
+      <app-cube3d></app-cube3d>
+
+      <div class="controls">
+        <button class="btn primary" (click)="game.reset()">Restart</button>
+        <button class="btn subtle" (click)="game.undo()">Undo</button>
+        <div class="mode">
+          <span>Mode:</span>
+          <button class="btn toggle" (click)="game.setMode('PVP')">Two Players</button>
+          <button class="btn toggle" (click)="game.setMode('AI')">Vs AI</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="side-area">
+      <app-sidebar></app-sidebar>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Tip: Drag to rotate; while dragging, the cube collapses for easier selection.</span>
+  </footer>
 </div>
