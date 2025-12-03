@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "files": [
+    "src/main.ts",
+    "src/environments/environment.ts",
+    "src/environments/environment.development.ts"
+  ]
+}
